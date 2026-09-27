@@ -10,8 +10,8 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    Uuid,
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -22,7 +22,7 @@ class DiagnosticCentre(Base):
 
     __tablename__ = "diagnostic_centres"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False, index=True)
     address = Column(String(500), nullable=False)
     city = Column(String(100), nullable=False, index=True)
@@ -55,7 +55,7 @@ class DiagnosticTest(Base):
 
     __tablename__ = "diagnostic_tests"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=True)
     category = Column(String(100), nullable=True, index=True)
@@ -77,14 +77,14 @@ class CentreTest(Base):
 
     __tablename__ = "centre_tests"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     centre_id = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("diagnostic_centres.id", ondelete="CASCADE"),
         nullable=False,
     )
     test_id = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("diagnostic_tests.id", ondelete="CASCADE"),
         nullable=False,
     )

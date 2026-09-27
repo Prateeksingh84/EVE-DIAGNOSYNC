@@ -11,8 +11,8 @@ from sqlalchemy import (
     String,
     func,
     JSON,
+    Uuid,
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -30,9 +30,9 @@ class Payment(Base):
 
     __tablename__ = "payments"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     booking_id = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("bookings.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -69,7 +69,7 @@ class WebhookEvent(Base):
 
     __tablename__ = "webhook_events"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     event_id = Column(
         String(100), unique=True, nullable=False, index=True
     )

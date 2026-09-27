@@ -9,8 +9,8 @@ from sqlalchemy import (
     Numeric,
     String,
     func,
+    Uuid,
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -29,18 +29,18 @@ class Booking(Base):
 
     __tablename__ = "bookings"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     booking_reference = Column(
         String(20), unique=True, nullable=False, index=True
     )
     user_id = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     centre_test_id = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("centre_tests.id", ondelete="CASCADE"),
         nullable=False,
     )
