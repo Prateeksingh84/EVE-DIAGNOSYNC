@@ -56,6 +56,14 @@ async def lifespan(app: FastAPI):
     )
     await init_db()
     logger.info("database_initialized")
+
+    # Auto-seed initial demo data if database is empty
+    try:
+        from app.seed import seed_data
+        await seed_data()
+    except Exception as e:
+        logger.warning("auto_seed_skipped", error=str(e))
+
     yield
     await close_db()
     await close_redis()
@@ -169,3 +177,11 @@ async def dashboard():
         </html>
         """
     )
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Favicon endpoint to prevent 404 logs."""
+    from fastapi.responses import Response
+    return Response(status_code=204)
+
