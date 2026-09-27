@@ -30,24 +30,70 @@ A production-grade backend service for diagnostic test bookings and simulated pa
 - Docker & Docker Compose **OR**
 - Python 3.12+, PostgreSQL 16+, Redis 7+
 
-### Option 1: Docker (Recommended)
+### 🌟 Interactive Web Dashboard (Built-in UI)
+
+The service includes a **real-time single-page web dashboard** served directly by FastAPI at:
+- **Dashboard UI**: [http://localhost:8000/](http://localhost:8000/) or [http://localhost:8000/dashboard](http://localhost:8000/dashboard)
+- **Interactive Swagger Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **ReDoc Documentation**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+
+Features of the dashboard:
+- 🏥 **Diagnostic Centres & Tests Explorer**: Real-time search, city filters, live test pricing, and one-click test booking.
+- 📋 **Patient Booking Management**: Live booking status tracking (`PENDING`, `CONFIRMED`, `FAILED`, `CANCELLED`), instant cancellation.
+- 💳 **Simulated Payment Gateway**: Real-time payment simulation with 80% Success / 20% Failed random distribution.
+- ⚡ **Webhook Idempotency Lab**: Interactive console to send webhook events, test repeated deliveries, and verify `already_processed` deduplication.
+- 👤 **One-Click Demo Auth**: Pre-filled buttons for Demo Patient & Demo Admin.
+
+---
+
+### Pre-loaded Demo Accounts & Seeder
+
+Run the seeder to instantly populate diagnostic centres (Apollo, Metropolis, Dr. Lal PathLabs) and tests:
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/eve-healthcare.git
-cd eve-healthcare
+python -m app.seed
+```
+*Or click "Seed Demo Data" directly in the web dashboard!*
 
+| Role | Email | Password |
+|---|---|---|
+| **Demo Patient** | `patient@evehealthcare.com` | `PatientPass123!` |
+| **Demo Admin** | `admin@evehealthcare.com` | `AdminPass123!` |
+
+---
+
+### Option 1: Zero-Setup Local Run (Instant)
+
+Works immediately out of the box with zero external dependencies (uses async SQLite + automatic Postgres fallback):
+
+```bash
+# 1. Create and activate virtual environment (Python 3.12 recommended)
+py -3.12 -m venv venv
+.\venv\Scripts\activate   # On Linux/macOS: source venv/bin/activate
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Start the server (auto-creates database on startup)
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# 4. Open http://localhost:8000 in your browser!
+```
+
+### Option 2: Full Docker Stack (PostgreSQL 16 + Redis + Celery)
+
+```bash
 # Copy environment file
 cp .env.example .env
 
-# Start all services
+# Start all 5 services (DB, Redis, API, Celery Worker, Celery Beat)
 docker-compose up --build -d
 
 # Run database migrations
 docker-compose exec api alembic upgrade head
 
-# The API is now available at http://localhost:8000
-# Swagger docs at http://localhost:8000/docs
+# Seed initial data
+docker-compose exec api python -m app.seed
 ```
 
 ### Option 2: Local Setup

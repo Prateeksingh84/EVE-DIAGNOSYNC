@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVE Healthcare — Diagnostic Test Booking & Payment Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              900: '#064e3b',
+            },
+            accent: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .code-font { font-family: 'JetBrains Mono', monospace; }
+    .badge-pending { background-color: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+    .badge-confirmed { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+    .badge-failed { background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .badge-cancelled { background-color: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- TOP BAR -->
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- BRAND -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+            <i class="fa-solid fa-heart-pulse text-lg"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-emerald-700 to-teal-600 bg-clip-text text-transparent">EVE Healthcare</span>
+              <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">API v1.0</span>
+            </div>
+            <p class="text-xs text-slate-500">Diagnostic Test Booking & Simulated Payments</p>
+          </div>
+        </div>
+
+        <!-- HEALTH & AUTH ACTIONS -->
+        <div class="flex items-center space-x-3">
+          <!-- Backend Status Pill -->
+          <div id="statusPill" class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-100 text-xs text-slate-600 border border-slate-200">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="statusText">Checking API...</span>
+          </div>
+
+          <!-- Documentation Links -->
+          <a href="/docs" target="_blank" class="hidden md:inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 transition border border-slate-200">
+            <i class="fa-solid fa-book text-slate-500"></i>
+            <span>Swagger Docs</span>
+          </a>
+
+          <!-- Reset / Seed Demo Data -->
+          <button onclick="seedDatabase()" title="Populate sample centres and tests" class="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition">
+            <i class="fa-solid fa-database"></i>
+            <span class="hidden sm:inline">Seed Demo Data</span>
+          </button>
+
+          <!-- User Pill / Auth Trigger -->
+          <div id="authContainer"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAVIGATION TABS -->
+  <nav class="bg-white border-b border-slate-200 sticky top-16 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex space-x-1 sm:space-x-8 overflow-x-auto py-2" id="navTabs">
+        <button onclick="switchTab('centres')" class="tab-btn active-tab px-3 py-2 text-sm font-semibold rounded-lg text-emerald-700 bg-emerald-50 border border-emerald-200 flex items-center space-x-2 whitespace-nowrap">
+          <i class="fa-solid fa-hospital"></i>
+          <span>Centres & Tests</span>
+        </button>
+        <button onclick="switchTab('bookings')" class="tab-btn px-3 py-2 text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 whitespace-nowrap">
+          <i class="fa-solid fa-calendar-check"></i>
+          <span>My Bookings</span>
+          <span id="bookingCountBadge" class="hidden px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-slate-200 text-slate-700">0</span>
+        </button>
+        <button onclick="switchTab('payments')" class="tab-btn px-3 py-2 text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 whitespace-nowrap">
+          <i class="fa-solid fa-credit-card"></i>
+          <span>Simulated Payment</span>
+        </button>
+        <button onclick="switchTab('webhook')" class="tab-btn px-3 py-2 text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 whitespace-nowrap">
+          <i class="fa-solid fa-bolt text-amber-500"></i>
+          <span>Webhook Testing (Idempotency)</span>
+        </button>
+        <button onclick="switchTab('architecture')" class="tab-btn px-3 py-2 text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 whitespace-nowrap">
+          <i class="fa-solid fa-cubes"></i>
+          <span>Architecture & Health</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- NOTIFICATION TOAST CONTAINER -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 1: DIAGNOSTIC CENTRES & TESTS                              -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="tab-centres" class="space-y-6">
+      
+      <!-- HERO BANNER -->
+      <div class="bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+        <div class="relative z-10 max-w-2xl">
+          <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold mb-3 border border-emerald-400/30">
+            <i class="fa-solid fa-vial-circle-check"></i>
+            <span>Diagnostic Booking Engine</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Book Diagnostic Tests with Real-Time Pricing</h1>
+          <p class="mt-2 text-sm text-emerald-100 leading-relaxed">
+            Browse certified diagnostic centres, compare test prices, schedule appointments, and process simulated payments with full idempotency protection.
+          </p>
+          <div class="mt-4 flex flex-wrap gap-2 text-xs">
+            <span class="bg-white/10 px-2.5 py-1 rounded-md">⚡ Asyncpg Engine</span>
+            <span class="bg-white/10 px-2.5 py-1 rounded-md">🔒 JWT Bearer Auth</span>
+            <span class="bg-white/10 px-2.5 py-1 rounded-md">🛡️ Idempotent Webhooks</span>
+            <span class="bg-white/10 px-2.5 py-1 rounded-md">⚡ Redis Caching</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEARCH & FILTERS -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div class="relative w-full sm:w-80">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+          <input type="text" id="centreSearchInput" placeholder="Search centre name..." oninput="handleSearch(this.value)" class="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        </div>
+        <div class="flex items-center space-x-1.5 w-full sm:w-auto overflow-x-auto">
+          <span class="text-xs font-semibold text-slate-500 mr-1">City:</span>
+          <button onclick="filterCity('')" class="city-btn active-city px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white shadow-sm">All</button>
+          <button onclick="filterCity('Mumbai')" class="city-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">Mumbai</button>
+          <button onclick="filterCity('Delhi')" class="city-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">New Delhi</button>
+          <button onclick="filterCity('Bengaluru')" class="city-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">Bengaluru</button>
+        </div>
+      </div>
+
+      <!-- CENTRES LIST GRID -->
+      <div id="centresGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="col-span-full text-center py-12 text-slate-400">
+          <i class="fa-solid fa-spinner fa-spin text-3xl mb-3 text-emerald-500"></i>
+          <p class="text-sm">Loading diagnostic centres from backend...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 2: MY BOOKINGS                                             -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="tab-bookings" class="hidden space-y-6">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+            <span>Patient Booking History</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">Live API</span>
+          </h2>
+          <p class="text-xs text-slate-500 mt-1">View, track, pay, and cancel your diagnostic test appointments.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="fetchBookings()" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center space-x-1.5">
+            <i class="fa-solid fa-rotate-right"></i>
+            <span>Refresh</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- BOOKINGS TABLE -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="py-3 px-4">Reference</th>
+                <th class="py-3 px-4">Diagnostic Test</th>
+                <th class="py-3 px-4">Centre</th>
+                <th class="py-3 px-4">Appointment</th>
+                <th class="py-3 px-4">Amount</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="bookingsTableBody" class="divide-y divide-slate-100">
+              <tr>
+                <td colspan="7" class="py-8 text-center text-slate-400 text-sm">
+                  Loading bookings...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 3: SIMULATED PAYMENT GATEWAY                               -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="tab-payments" class="hidden space-y-6">
+      <div class="max-w-2xl mx-auto">
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-md p-6 sm:p-8 space-y-6">
+          <div class="text-center space-y-2">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-2xl shadow-inner">
+              <i class="fa-solid fa-cash-register"></i>
+            </div>
+            <h2 class="text-xl font-bold text-slate-900">Simulated Payment Gateway</h2>
+            <p class="text-xs text-slate-500">
+              Endpoint: <code class="code-font bg-slate-100 px-1.5 py-0.5 rounded text-indigo-700">POST /api/v1/payments/</code>
+            </p>
+            <p class="text-xs text-slate-600 max-w-md mx-auto">
+              Simulates real-world payment processing with an 80% Success / 20% Failed random distribution as specified in the assignment.
+            </p>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Select Pending Booking to Pay</label>
+              <select id="paymentBookingSelect" class="w-full text-sm rounded-xl border border-slate-200 px-3.5 py-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">-- Choose a booking --</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Or Paste Booking ID (UUID)</label>
+              <input type="text" id="paymentBookingInput" placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000" class="w-full text-sm rounded-xl border border-slate-200 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 code-font">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Payment Method</label>
+              <select id="paymentMethodSelect" class="w-full text-sm rounded-xl border border-slate-200 px-3.5 py-2.5 bg-slate-50">
+                <option value="SIMULATED_UPI">UPI / QR Code (Simulated)</option>
+                <option value="SIMULATED_CARD">Credit / Debit Card (Simulated)</option>
+                <option value="SIMULATED_NETBANKING">Net Banking (Simulated)</option>
+              </select>
+            </div>
+
+            <button id="processPaymentBtn" onclick="processPayment()" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold text-sm shadow-md shadow-indigo-500/20 transition flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-lock"></i>
+              <span>Process Simulated Payment</span>
+            </button>
+          </div>
+
+          <!-- PAYMENT RESULT BOX -->
+          <div id="paymentResultBox" class="hidden p-5 rounded-2xl border transition"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 4: WEBHOOK TESTING CONSOLE (IDEMPOTENCY LAB)                -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="tab-webhook" class="hidden space-y-6">
+      <div class="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 rounded-3xl p-6 sm:p-8 text-white shadow-xl">
+        <div class="max-w-2xl">
+          <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-semibold mb-2">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>Idempotency Verification Lab</span>
+          </div>
+          <h2 class="text-2xl font-bold tracking-tight">Payment Webhook Endpoint Tester</h2>
+          <p class="mt-2 text-xs sm:text-sm text-amber-50 leading-relaxed">
+            The webhook endpoint <code class="code-font bg-black/20 px-1 rounded">POST /api/v1/payments/webhook/</code> tracks every event ID in the database.
+            Sending the exact same event multiple times will <strong>safely return "already_processed"</strong> without duplicating charges or corrupting booking state.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- WEBHOOK FORM -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+          <h3 class="text-base font-bold text-slate-900 flex items-center justify-between">
+            <span>Webhook Payload Builder</span>
+            <button onclick="generateRandomWebhook()" class="text-xs font-semibold text-amber-600 hover:text-amber-700 flex items-center space-x-1">
+              <i class="fa-solid fa-shuffle"></i>
+              <span>Generate New Event</span>
+            </button>
+          </h3>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Event ID (Idempotency Key)</label>
+            <input type="text" id="whEventId" class="w-full text-sm rounded-xl border border-slate-200 px-3.5 py-2 code-font focus:ring-2 focus:ring-amber-500 focus:outline-none">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Event Type</label>
+              <select id="whEventType" class="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-slate-50">
+                <option value="payment.success">payment.success</option>
+                <option value="payment.failed">payment.failed</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Status</label>
+              <select id="whStatus" class="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-slate-50">
+                <option value="SUCCESS">SUCCESS</option>
+                <option value="FAILED">FAILED</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Transaction ID</label>
+            <input type="text" id="whTxnId" placeholder="e.g. TXN-123456789ABC" class="w-full text-sm rounded-xl border border-slate-200 px-3.5 py-2 code-font">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Related Booking ID (UUID)</label>
+              <input type="text" id="whBookingId" placeholder="UUID" class="w-full text-sm rounded-xl border border-slate-200 px-3.5 py-2 code-font">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Amount</label>
+              <input type="number" id="whAmount" value="500.00" step="10" class="w-full text-sm rounded-xl border border-slate-200 px-3.5 py-2">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Secret Header (X-Webhook-Secret)</label>
+            <input type="text" id="whSecret" value="change-this-webhook-secret-in-production" class="w-full text-sm rounded-xl border border-slate-200 px-3.5 py-2 code-font">
+          </div>
+
+          <div class="pt-2 flex space-x-2">
+            <button onclick="sendWebhook()" class="flex-1 py-3 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm shadow-md shadow-amber-500/20 transition flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-paper-plane"></i>
+              <span>Send Webhook</span>
+            </button>
+            <button onclick="sendWebhookTwice()" title="Sends the exact same payload twice in a row to verify idempotency" class="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs shadow-md transition flex items-center justify-center space-x-1">
+              <i class="fa-solid fa-repeat"></i>
+              <span>Test Idempotency (2x)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- WEBHOOK RESPONSE VIEWER -->
+        <div class="bg-slate-900 text-slate-100 p-6 rounded-3xl shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Live Response Log</span>
+              <span id="whHttpBadge" class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-400">Idle</span>
+            </div>
+            <pre id="whResponseJson" class="code-font text-xs text-emerald-400 overflow-x-auto whitespace-pre-wrap leading-relaxed max-h-96">Click "Send Webhook" to execute request and observe server response.</pre>
+          </div>
+          <div class="pt-4 border-t border-slate-800 text-xs text-slate-400">
+            <i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i>
+            <span>Tip: Click <strong>"Test Idempotency (2x)"</strong> to send the event twice. Watch the 2nd response switch to <code>already_processed</code>!</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 5: ARCHITECTURE & SYSTEM HEALTH                            -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="tab-architecture" class="hidden space-y-6">
+      
+      <!-- HEALTH METRICS CARDS -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="text-slate-500 text-xs font-semibold uppercase">API Service</div>
+          <div class="text-lg font-bold text-emerald-600 mt-1 flex items-center space-x-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <span>Healthy (200 OK)</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">FastAPI async runtime</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="text-slate-500 text-xs font-semibold uppercase">Database Engine</div>
+          <div id="dbTypeBadge" class="text-lg font-bold text-slate-800 mt-1">PostgreSQL / SQLite</div>
+          <p class="text-xs text-slate-400 mt-1">Universal SQLAlchemy 2.0 ORM</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="text-slate-500 text-xs font-semibold uppercase">Idempotency Guard</div>
+          <div class="text-lg font-bold text-indigo-600 mt-1">Active</div>
+          <p class="text-xs text-slate-400 mt-1">webhook_events tracking table</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="text-slate-500 text-xs font-semibold uppercase">Background Tasks</div>
+          <div class="text-lg font-bold text-amber-600 mt-1">Celery Worker + Beat</div>
+          <p class="text-xs text-slate-400 mt-1">Expired booking cleanup</p>
+        </div>
+      </div>
+
+      <!-- ARCHITECTURE OVERVIEW -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <h3 class="text-base font-bold text-slate-900">Layered Clean Architecture</h3>
+        <p class="text-xs text-slate-600 leading-relaxed">
+          The service is structured following Domain-Driven principles, separating the HTTP transport layer from business logic and database persistence.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-xs font-bold text-indigo-600 mb-1">1. API Routers</div>
+            <p class="text-xs text-slate-600">FastAPI routers handle serialization, query parameters, JWT authentication, and HTTP status codes.</p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-xs font-bold text-emerald-600 mb-1">2. Service Layer</div>
+            <p class="text-xs text-slate-600">Pure business logic, booking state machine transitions, simulated payment algorithms, and idempotency checks.</p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-xs font-bold text-amber-600 mb-1">3. Schemas (Pydantic v2)</div>
+            <p class="text-xs text-slate-600">Strict request validation (password strength, future appointment dates, valid phone numbers).</p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-xs font-bold text-rose-600 mb-1">4. ORM & Persistence</div>
+            <p class="text-xs text-slate-600">SQLAlchemy 2.0 with universal UUIDs, junction tables with per-centre test pricing, and migrations.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- MODAL: BOOK DIAGNOSTIC TEST                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div id="bookingModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-200">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Schedule Diagnostic Test</h3>
+          <p class="text-xs text-slate-500">Pick an appointment time</p>
+        </div>
+        <button onclick="closeBookingModal()" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+          <div class="text-xs text-emerald-800 font-semibold" id="modalTestName">Test Name</div>
+          <div class="text-xs text-emerald-600" id="modalCentreName">Centre Name</div>
+          <div class="text-sm font-extrabold text-emerald-700 mt-1" id="modalPrice">₹0.00</div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Appointment Date & Time</label>
+          <input type="datetime-local" id="modalAppointmentTime" class="w-full text-sm rounded-xl border border-slate-200 px-3.5 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          <p class="text-[11px] text-slate-400 mt-1">Must be scheduled in the future.</p>
+        </div>
+
+        <input type="hidden" id="modalCentreTestId">
+
+        <div class="pt-2 flex space-x-3">
+          <button onclick="closeBookingModal()" class="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50">Cancel</button>
+          <button onclick="submitBooking()" class="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-md shadow-emerald-500/20">Confirm Booking</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- MODAL: AUTHENTICATION (LOGIN / SIGNUP)                          -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div id="authModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-4 border border-slate-200">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div>
+          <h3 id="authModalTitle" class="text-lg font-bold text-slate-900">Sign In</h3>
+          <p class="text-xs text-slate-500">Access your bookings and payments</p>
+        </div>
+        <button onclick="closeAuthModal()" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <!-- Quick Fill Buttons -->
+        <div class="p-2 rounded-xl bg-slate-50 border border-slate-200 flex space-x-2">
+          <button onclick="quickFill('patient')" class="flex-1 py-1.5 text-[11px] font-semibold rounded-lg bg-white border border-slate-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition">
+            Demo Patient
+          </button>
+          <button onclick="quickFill('admin')" class="flex-1 py-1.5 text-[11px] font-semibold rounded-lg bg-white border border-slate-200 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition">
+            Demo Admin
+          </button>
+        </div>
+
+        <div id="signupNameField" class="hidden">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
+          <input type="text" id="authFullName" placeholder="e.g. John Doe" class="w-full text-sm rounded-xl border border-slate-200 px-3.5 py-2">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+          <input type="email" id="authEmail" placeholder="patient@evehealthcare.com" class="w-full text-sm rounded-xl border border-slate-200 px-3.5 py-2">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+          <input type="password" id="authPassword" placeholder="••••••••" class="w-full text-sm rounded-xl border border-slate-200 px-3.5 py-2">
+        </div>
+
+        <button id="authSubmitBtn" onclick="submitAuth()" class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-md shadow-emerald-500/20 transition">
+          Sign In
+        </button>
+
+        <div class="text-center pt-1">
+          <button onclick="toggleAuthMode()" id="authToggleBtn" class="text-xs text-emerald-700 font-medium hover:underline">
+            Don't have an account? Sign up
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT APP LOGIC -->
+  <script>
+    // State
+    const API_BASE = '/api/v1';
+    let currentUser = null;
+    let token = localStorage.getItem('eve_access_token') || null;
+    let centresData = [];
+    let currentFilterCity = '';
+    let currentSearchTerm = '';
+    let authMode = 'login'; // 'login' or 'signup'
+
+    // Init on load
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkApiHealth();
+      generateRandomWebhook();
+      setDefaultAppointmentTime();
+      if (token) {
+        await loadUserProfile();
+      } else {
+        renderAuthButton();
+      }
+      await fetchCentres();
+    });
+
+    // Toast Notification helper
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const colors = {
+        success: 'bg-emerald-900/90 text-emerald-100 border-emerald-700',
+        error: 'bg-rose-900/90 text-rose-100 border-rose-700',
+        info: 'bg-slate-900/90 text-slate-100 border-slate-700'
+      };
+      const icons = {
+        success: 'fa-circle-check text-emerald-400',
+        error: 'fa-circle-exclamation text-rose-400',
+        info: 'fa-circle-info text-cyan-400'
+      };
+      toast.className = `${colors[type] || colors.info} border px-4 py-3 rounded-2xl shadow-xl flex items-center space-x-2.5 text-xs font-medium backdrop-blur-md pointer-events-auto transform transition duration-300 translate-y-2 opacity-0`;
+      toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info}"></i><span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => { toast.classList.remove('translate-y-2', 'opacity-0'); }, 10);
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // Tab switcher
+    function switchTab(tabName) {
+      document.querySelectorAll('section[id^="tab-"]').forEach(el => el.classList.add('hidden'));
+      const target = document.getElementById(`tab-${tabName}`);
+      if (target) target.classList.remove('hidden');
+
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active-tab', 'text-emerald-700', 'bg-emerald-50', 'border-emerald-200');
+        btn.classList.add('text-slate-600');
+      });
+      event.currentTarget.classList.add('active-tab', 'text-emerald-700', 'bg-emerald-50', 'border', 'border-emerald-200');
+      event.currentTarget.classList.remove('text-slate-600');
+
+      if (tabName === 'bookings') fetchBookings();
+      if (tabName === 'payments') populatePaymentBookings();
+    }
+
+    // Health check
+    async function checkApiHealth() {
+      try {
+        const res = await fetch('/health');
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('statusText').textContent = 'Backend Online (FastAPI)';
+        }
+      } catch (err) {
+        document.getElementById('statusText').textContent = 'Offline';
+        document.getElementById('statusPill').classList.replace('text-slate-600', 'text-rose-600');
+      }
+    }
+
+    // Seed database
+    async function seedDatabase() {
+      try {
+        const res = await fetch(`${API_BASE}/seed`, { method: 'POST' });
+        const data = await res.json();
+        showToast(data.message || 'Demo data loaded successfully!', 'success');
+        await fetchCentres();
+      } catch (err) {
+        showToast('Seed complete or already contains data.', 'info');
+        await fetchCentres();
+      }
+    }
+
+    // Load User Profile
+    async function loadUserProfile() {
+      try {
+        const res = await fetch(`${API_BASE}/auth/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          currentUser = await res.json();
+          renderAuthButton();
+          fetchBookingsCount();
+        } else {
+          logout();
+        }
+      } catch (err) {
+        logout();
+      }
+    }
+
+    function renderAuthButton() {
+      const container = document.getElementById('authContainer');
+      if (currentUser) {
+        container.innerHTML = `
+          <div class="flex items-center space-x-2 bg-slate-50 border border-slate-200 pl-2 pr-1 py-1 rounded-xl">
+            <div class="text-left hidden sm:block">
+              <div class="text-xs font-bold text-slate-800">${currentUser.full_name}</div>
+              <div class="text-[10px] text-slate-400">${currentUser.is_admin ? 'Admin' : 'Patient'}</div>
+            </div>
+            <button onclick="logout()" title="Log out" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-200 flex items-center justify-center transition">
+              <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+            </button>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <button onclick="openAuthModal('login')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition">
+            Sign In / Demo
+          </button>
+        `;
+      }
+    }
+
+    function openAuthModal(mode = 'login') {
+      authMode = mode;
+      document.getElementById('authModal').classList.remove('hidden');
+      updateAuthModalUI();
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.add('hidden');
+    }
+
+    function toggleAuthMode() {
+      authMode = authMode === 'login' ? 'signup' : 'login';
+      updateAuthModalUI();
+    }
+
+    function updateAuthModalUI() {
+      const isLogin = authMode === 'login';
+      document.getElementById('authModalTitle').textContent = isLogin ? 'Sign In' : 'Create Account';
+      document.getElementById('authSubmitBtn').textContent = isLogin ? 'Sign In' : 'Sign Up';
+      document.getElementById('authToggleBtn').textContent = isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in';
+      document.getElementById('signupNameField').classList.toggle('hidden', isLogin);
+    }
+
+    function quickFill(role) {
+      if (role === 'patient') {
+        document.getElementById('authEmail').value = 'patient@evehealthcare.com';
+        document.getElementById('authPassword').value = 'PatientPass123!';
+        if (document.getElementById('authFullName')) document.getElementById('authFullName').value = 'John Doe';
+      } else {
+        document.getElementById('authEmail').value = 'admin@evehealthcare.com';
+        document.getElementById('authPassword').value = 'AdminPass123!';
+        if (document.getElementById('authFullName')) document.getElementById('authFullName').value = 'Admin Director';
+      }
+    }
+
+    async function submitAuth() {
+      const email = document.getElementById('authEmail').value;
+      const password = document.getElementById('authPassword').value;
+      const fullName = document.getElementById('authFullName')?.value || '';
+
+      if (!email || !password) {
+        showToast('Please enter email and password.', 'error');
+        return;
+      }
+
+      try {
+        if (authMode === 'login') {
+          const res = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || 'Login failed');
+          token = data.access_token;
+          localStorage.setItem('eve_access_token', token);
+          showToast('Signed in successfully!', 'success');
+        } else {
+          const res = await fetch(`${API_BASE}/auth/signup`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, full_name: fullName || 'Patient User' })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || 'Signup failed');
+          // auto login
+          const loginRes = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+          const loginData = await loginRes.json();
+          token = loginData.access_token;
+          localStorage.setItem('eve_access_token', token);
+          showToast('Account created & signed in!', 'success');
+        }
+
+        closeAuthModal();
+        await loadUserProfile();
+        fetchBookings();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    function logout() {
+      token = null;
+      currentUser = null;
+      localStorage.removeItem('eve_access_token');
+      renderAuthButton();
+      showToast('Logged out.', 'info');
+      document.getElementById('bookingsTableBody').innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-400">Sign in to view your bookings</td></tr>';
+    }
+
+    // Fetch Diagnostic Centres
+    async function fetchCentres() {
+      try {
+        const res = await fetch(`${API_BASE}/diagnostics/centres?page_size=50`);
+        const data = await res.json();
+        centresData = data.items || [];
+        renderCentres();
+      } catch (err) {
+        document.getElementById('centresGrid').innerHTML = `
+          <div class="col-span-full bg-rose-50 border border-rose-200 text-rose-800 p-6 rounded-2xl text-center text-sm">
+            Failed to load centres. Try clicking "Seed Demo Data" above.
+          </div>
+        `;
+      }
+    }
+
+    function filterCity(city) {
+      currentFilterCity = city;
+      document.querySelectorAll('.city-btn').forEach(btn => {
+        btn.classList.remove('bg-emerald-600', 'text-white', 'shadow-sm');
+        btn.classList.add('bg-slate-100', 'text-slate-600');
+      });
+      event.currentTarget.classList.add('bg-emerald-600', 'text-white', 'shadow-sm');
+      event.currentTarget.classList.remove('bg-slate-100', 'text-slate-600');
+      renderCentres();
+    }
+
+    function handleSearch(term) {
+      currentSearchTerm = term.toLowerCase().trim();
+      renderCentres();
+    }
+
+    function renderCentres() {
+      const container = document.getElementById('centresGrid');
+      let filtered = centresData;
+
+      if (currentFilterCity) {
+        filtered = filtered.filter(c => c.city.toLowerCase().includes(currentFilterCity.toLowerCase()));
+      }
+      if (currentSearchTerm) {
+        filtered = filtered.filter(c => c.name.toLowerCase().includes(currentSearchTerm));
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full text-center py-12 bg-white rounded-2xl border border-slate-200 text-slate-400 text-sm">
+            <i class="fa-solid fa-hospital-user text-3xl mb-2 text-slate-300"></i>
+            <p>No diagnostic centres found. Click "Seed Demo Data" to load sample labs.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(c => `
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition p-6 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">${c.city}</span>
+                <h3 class="text-base font-bold text-slate-900 mt-2">${c.name}</h3>
+              </div>
+              <span class="w-2.5 h-2.5 rounded-full ${c.is_active ? 'bg-emerald-500' : 'bg-slate-300'}" title="${c.is_active ? 'Active' : 'Inactive'}"></span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1 flex items-center space-x-1">
+              <i class="fa-solid fa-location-dot text-slate-400"></i>
+              <span>${c.address}, ${c.pincode}</span>
+            </p>
+            ${c.phone ? `<p class="text-xs text-slate-400 mt-0.5"><i class="fa-solid fa-phone text-slate-300"></i> ${c.phone}</p>` : ''}
+          </div>
+
+          <div class="border-t border-slate-100 pt-3 space-y-2">
+            <div class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Available Diagnostic Tests:</div>
+            <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+              ${(c.centre_tests && c.centre_tests.length > 0) ? c.centre_tests.map(ct => `
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 hover:bg-emerald-50/50 transition text-xs">
+                  <div>
+                    <div class="font-semibold text-slate-800">${ct.test?.name || 'Diagnostic Test'}</div>
+                    <div class="text-[10px] text-slate-400">${ct.test?.category || 'General'}</div>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span class="font-bold text-emerald-700">₹${parseFloat(ct.price).toFixed(2)}</span>
+                    <button onclick="openBookingModal('${ct.id}', '${escape(ct.test?.name)}', '${escape(c.name)}', '${ct.price}')" class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-[11px] transition shadow-xs">
+                      Book
+                    </button>
+                  </div>
+                </div>
+              `).join('') : '<p class="text-xs text-slate-400 italic">No tests associated.</p>'}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Booking Modal
+    function setDefaultAppointmentTime() {
+      const now = new Date();
+      now.setDate(now.getDate() + 1);
+      now.setHours(10, 0, 0, 0);
+      const iso = now.toISOString().slice(0, 16);
+      document.getElementById('modalAppointmentTime').value = iso;
+    }
+
+    function openBookingModal(centreTestId, testName, centreName, price) {
+      if (!token) {
+        showToast('Please sign in to book a test.', 'info');
+        openAuthModal('login');
+        return;
+      }
+      document.getElementById('modalCentreTestId').value = centreTestId;
+      document.getElementById('modalTestName').textContent = unescape(testName);
+      document.getElementById('modalCentreName').textContent = unescape(centreName);
+      document.getElementById('modalPrice').textContent = `₹${parseFloat(price).toFixed(2)}`;
+      document.getElementById('bookingModal').classList.remove('hidden');
+    }
+
+    function closeBookingModal() {
+      document.getElementById('bookingModal').classList.add('hidden');
+    }
+
+    async function submitBooking() {
+      const centreTestId = document.getElementById('modalCentreTestId').value;
+      const appointmentTime = document.getElementById('modalAppointmentTime').value;
+
+      if (!appointmentTime) {
+        showToast('Please select appointment date and time.', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/bookings/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            centre_test_id: centreTestId,
+            appointment_datetime: new Date(appointmentTime).toISOString()
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Booking failed');
+
+        closeBookingModal();
+        showToast(`Booking ${data.booking_reference} confirmed! Proceeding to payment.`, 'success');
+        switchTab('bookings');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    // Fetch Bookings
+    async function fetchBookings() {
+      if (!token) {
+        document.getElementById('bookingsTableBody').innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-400">Sign in to view your bookings</td></tr>';
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/bookings/`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        renderBookings(data.items || []);
+        fetchBookingsCount();
+      } catch (err) {
+        showToast('Failed to load bookings.', 'error');
+      }
+    }
+
+    async function fetchBookingsCount() {
+      if (!token) return;
+      try {
+        const res = await fetch(`${API_BASE}/bookings/`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        const count = (data.items || []).length;
+        const badge = document.getElementById('bookingCountBadge');
+        badge.textContent = count;
+        badge.classList.remove('hidden');
+      } catch (err) {}
+    }
+
+    function renderBookings(bookings) {
+      const tbody = document.getElementById('bookingsTableBody');
+      if (bookings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-400 text-sm">No bookings found. Book your first diagnostic test above!</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = bookings.map(b => {
+        const dt = new Date(b.appointment_datetime).toLocaleString();
+        const statusClass = `badge-${b.status.toLowerCase()}`;
+        return `
+          <tr class="hover:bg-slate-50/50 transition">
+            <td class="py-3 px-4 font-mono font-bold text-xs text-slate-800">${b.booking_reference}</td>
+            <td class="py-3 px-4 font-semibold text-slate-800">${b.test_name || 'Diagnostic Test'}</td>
+            <td class="py-3 px-4 text-xs text-slate-500">${b.centre_name || 'Diagnostic Lab'}</td>
+            <td class="py-3 px-4 text-xs text-slate-600">${dt}</td>
+            <td class="py-3 px-4 font-bold text-slate-800">₹${parseFloat(b.amount).toFixed(2)}</td>
+            <td class="py-3 px-4">
+              <span class="px-2.5 py-1 text-[11px] font-bold rounded-full ${statusClass}">${b.status}</span>
+            </td>
+            <td class="py-3 px-4 text-right space-x-1">
+              ${b.status === 'PENDING' ? `
+                <button onclick="payBooking('${b.id}')" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs">
+                  Pay
+                </button>
+                <button onclick="cancelBooking('${b.id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 text-xs font-medium">
+                  Cancel
+                </button>
+              ` : b.status === 'CONFIRMED' ? `
+                <span class="text-xs text-emerald-600 font-semibold"><i class="fa-solid fa-check"></i> Paid</span>
+              ` : `
+                <span class="text-xs text-slate-400">—</span>
+              `}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function cancelBooking(bookingId) {
+      if (!confirm('Are you sure you want to cancel this pending booking?')) return;
+      try {
+        const res = await fetch(`${API_BASE}/bookings/${bookingId}/cancel`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Cancellation failed');
+        showToast('Booking cancelled.', 'info');
+        fetchBookings();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    function payBooking(bookingId) {
+      switchTab('payments');
+      document.getElementById('paymentBookingInput').value = bookingId;
+    }
+
+    // Populate Payment dropdown
+    async function populatePaymentBookings() {
+      const select = document.getElementById('paymentBookingSelect');
+      select.innerHTML = '<option value="">-- Choose a pending booking --</option>';
+      if (!token) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/bookings/?status=PENDING`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        (data.items || []).forEach(b => {
+          const opt = document.createElement('option');
+          opt.value = b.id;
+          opt.textContent = `${b.booking_reference} — ${b.test_name || 'Test'} (₹${parseFloat(b.amount).toFixed(2)})`;
+          select.appendChild(opt);
+        });
+
+        select.onchange = (e) => {
+          if (e.target.value) {
+            document.getElementById('paymentBookingInput').value = e.target.value;
+          }
+        };
+      } catch (err) {}
+    }
+
+    // Process Simulated Payment
+    async function processPayment() {
+      if (!token) {
+        showToast('Please sign in to make a payment.', 'info');
+        openAuthModal('login');
+        return;
+      }
+
+      const bookingId = document.getElementById('paymentBookingInput').value.trim() || document.getElementById('paymentBookingSelect').value;
+      const paymentMethod = document.getElementById('paymentMethodSelect').value;
+      const btn = document.getElementById('processPaymentBtn');
+      const resultBox = document.getElementById('paymentResultBox');
+
+      if (!bookingId) {
+        showToast('Please choose or enter a Booking ID.', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Processing Simulated Gateway...</span>';
+
+      try {
+        const res = await fetch(`${API_BASE}/payments/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            booking_id: bookingId,
+            payment_method: paymentMethod
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Payment failed');
+
+        const isSuccess = data.status === 'SUCCESS';
+        resultBox.className = `p-5 rounded-2xl border ${isSuccess ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900'}`;
+        resultBox.innerHTML = `
+          <div class="flex items-center space-x-2 font-bold text-sm">
+            <i class="fa-solid ${isSuccess ? 'fa-circle-check text-emerald-600' : 'fa-circle-xmark text-rose-600'} text-lg"></i>
+            <span>Payment ${data.status}!</span>
+          </div>
+          <div class="mt-2 text-xs space-y-1 font-mono">
+            <div>Transaction ID: <strong>${data.transaction_id}</strong></div>
+            <div>Amount Paid: <strong>₹${parseFloat(data.amount).toFixed(2)}</strong></div>
+            <div>Booking Status: <strong>${isSuccess ? 'CONFIRMED' : 'FAILED'}</strong></div>
+          </div>
+          <div class="mt-3 text-[11px] text-slate-500">
+            ${isSuccess ? 'Appointment confirmed! Details sent to your account.' : 'Payment simulated a failure. You may re-try payment.'}
+          </div>
+        `;
+        resultBox.classList.remove('hidden');
+
+        showToast(`Payment ${data.status} for transaction ${data.transaction_id}`, isSuccess ? 'success' : 'error');
+        fetchBookings();
+      } catch (err) {
+        showToast(err.message, 'error');
+        resultBox.className = 'p-5 rounded-2xl border bg-rose-50 border-rose-200 text-rose-900';
+        resultBox.innerHTML = `<div class="text-xs font-semibold">${err.message}</div>`;
+        resultBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-lock"></i><span>Process Simulated Payment</span>';
+      }
+    }
+
+    // Webhook Testing Console
+    function generateRandomWebhook() {
+      const uuid = 'evt_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now();
+      document.getElementById('whEventId').value = uuid;
+      document.getElementById('whTxnId').value = 'TXN-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+      if (!document.getElementById('whBookingId').value) {
+        document.getElementById('whBookingId').value = '550e8400-e29b-41d4-a716-446655440000';
+      }
+    }
+
+    async function sendWebhook() {
+      const eventId = document.getElementById('whEventId').value.trim();
+      const eventType = document.getElementById('whEventType').value;
+      const status = document.getElementById('whStatus').value;
+      const txnId = document.getElementById('whTxnId').value.trim();
+      const bookingId = document.getElementById('whBookingId').value.trim();
+      const amount = parseFloat(document.getElementById('whAmount').value) || 500;
+      const secret = document.getElementById('whSecret').value.trim();
+
+      const payload = {
+        event_id: eventId,
+        event_type: eventType,
+        transaction_id: txnId,
+        status: status,
+        amount: amount,
+        booking_id: bookingId,
+        timestamp: new Date().toISOString()
+      };
+
+      const start = performance.now();
+      try {
+        const res = await fetch(`${API_BASE}/payments/webhook/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Webhook-Secret': secret
+          },
+          body: JSON.stringify(payload)
+        });
+        const elapsed = Math.round(performance.now() - start);
+        const data = await res.json();
+
+        document.getElementById('whHttpBadge').textContent = `HTTP ${res.status} (${elapsed}ms)`;
+        document.getElementById('whHttpBadge').className = `text-xs font-semibold px-2 py-0.5 rounded ${res.ok ? 'bg-emerald-950 text-emerald-400' : 'bg-rose-950 text-rose-400'}`;
+
+        const isDuplicate = data.status === 'already_processed';
+        document.getElementById('whResponseJson').innerHTML = JSON.stringify(data, null, 2);
+
+        if (isDuplicate) {
+          showToast(`Idempotency Verified! Event ${eventId} was already processed.`, 'info');
+        } else if (res.ok) {
+          showToast(`Webhook processed: ${data.message}`, 'success');
+        } else {
+          showToast(`Webhook error: ${data.detail || 'Failed'}`, 'error');
+        }
+      } catch (err) {
+        document.getElementById('whResponseJson').textContent = `Error: ${err.message}`;
+      }
+    }
+
+    async function sendWebhookTwice() {
+      showToast('Sending Call 1 of 2...', 'info');
+      await sendWebhook();
+      setTimeout(async () => {
+        showToast('Sending Call 2 of 2 (Same Event ID)...', 'info');
+        await sendWebhook();
+      }, 1000);
+    }
+  </script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 import json
+import time
 from typing import Any, Optional
 
 import redis.asyncio as redis
@@ -9,29 +10,40 @@ from app.config import settings
 logger = structlog.get_logger(__name__)
 
 _redis_pool: Optional[redis.Redis] = None
+_last_failed_attempt: float = 0
+_RETRY_INTERVAL: float = 60.0  # Retry every 60 seconds if Redis was down
 
 
 async def get_redis() -> Optional[redis.Redis]:
-    """Get or create a Redis connection."""
-    global _redis_pool
-    if _redis_pool is None:
-        try:
-            _redis_pool = redis.from_url(
-                settings.REDIS_URL,
-                encoding="utf-8",
-                decode_responses=True,
-                socket_connect_timeout=5,
-            )
-            await _redis_pool.ping()
-            logger.info("redis_connected", url=settings.REDIS_URL)
-        except Exception as e:
-            logger.warning(
-                "redis_connection_failed",
-                error=str(e),
-                message="Continuing without cache",
-            )
-            _redis_pool = None
-    return _redis_pool
+    """Get or create a Redis connection. Gracefully bypasses if Redis is unreachable."""
+    global _redis_pool, _last_failed_attempt
+    if _redis_pool is not None:
+        return _redis_pool
+
+    now = time.time()
+    if now - _last_failed_attempt < _RETRY_INTERVAL:
+        return None
+
+    try:
+        pool = redis.from_url(
+            settings.REDIS_URL,
+            encoding="utf-8",
+            decode_responses=True,
+            socket_connect_timeout=1,
+        )
+        await pool.ping()
+        _redis_pool = pool
+        logger.info("redis_connected", url=settings.REDIS_URL)
+        return _redis_pool
+    except Exception as e:
+        _last_failed_attempt = now
+        logger.warning(
+            "redis_connection_failed",
+            error=str(e),
+            message="Continuing without cache (will retry in 60s)",
+        )
+        _redis_pool = None
+        return None
 
 
 async def cache_get(key: str) -> Optional[Any]:

@@ -1,9 +1,10 @@
+import os
 import structlog
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -108,6 +109,19 @@ app.include_router(
 )
 
 
+# ─── Seed Demo Endpoint ───────────────────────────────────────────────
+@app.post(
+    f"{settings.API_V1_PREFIX}/seed",
+    tags=["Seed"],
+    summary="Seed demo diagnostic centres and tests",
+)
+async def seed_endpoint():
+    """Populate initial demo data for diagnostic centres, tests, and demo users."""
+    from app.seed import seed_data
+    result = await seed_data()
+    return result
+
+
 # ─── Health Check ─────────────────────────────────────────────────────
 @app.get(
     "/health",
@@ -124,16 +138,34 @@ async def health_check():
     }
 
 
+# ─── Interactive Web Dashboard ────────────────────────────────────────
+DASHBOARD_PATH = os.path.join(os.path.dirname(__file__), "static", "dashboard.html")
+
+
 @app.get(
     "/",
-    tags=["Root"],
-    summary="API root",
+    tags=["Dashboard"],
+    response_class=HTMLResponse,
+    summary="Interactive Web Dashboard UI",
 )
-async def root():
-    """API welcome endpoint."""
-    return {
-        "message": f"Welcome to {settings.APP_NAME}",
-        "version": settings.APP_VERSION,
-        "docs": "/docs",
-        "health": "/health",
-    }
+@app.get(
+    "/dashboard",
+    tags=["Dashboard"],
+    response_class=HTMLResponse,
+    summary="Interactive Web Dashboard UI",
+)
+async def dashboard():
+    """Serve the interactive real-time dashboard UI."""
+    if os.path.exists(DASHBOARD_PATH):
+        with open(DASHBOARD_PATH, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(
+        content="""
+        <html>
+            <body style='font-family: sans-serif; text-align: center; padding: 50px;'>
+                <h2>EVE Healthcare API</h2>
+                <p>Visit <a href='/docs'>Swagger UI /docs</a> or <a href='/redoc'>ReDoc /redoc</a></p>
+            </body>
+        </html>
+        """
+    )

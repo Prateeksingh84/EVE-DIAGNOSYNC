@@ -18,10 +18,12 @@ from app.models.user import User
 from app.security import hash_password, create_access_token
 
 
-# Use a separate test database
-TEST_DATABASE_URL = settings.DATABASE_URL.replace(
-    "/eve_healthcare", "/eve_healthcare_test"
-)
+if "sqlite" in settings.DATABASE_URL:
+    TEST_DATABASE_URL = "sqlite+aiosqlite:///./eve_healthcare_test.db"
+else:
+    TEST_DATABASE_URL = settings.DATABASE_URL.replace(
+        "/eve_healthcare", "/eve_healthcare_test"
+    )
 
 test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 TestSessionLocal = async_sessionmaker(
