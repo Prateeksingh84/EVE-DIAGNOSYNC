@@ -12,7 +12,7 @@ from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.database import init_db, close_db
 from app.middleware.logging_middleware import RequestLoggingMiddleware
-from app.routers import auth, diagnostics, bookings, payments
+from app.routers import auth, diagnostics, bookings, payments, notifications, analytics
 from app.services.cache_service import close_redis
 from app.utils.exceptions import (
     global_exception_handler,
@@ -114,6 +114,12 @@ app.include_router(
 )
 app.include_router(
     payments.router, prefix=settings.API_V1_PREFIX
+)
+app.include_router(
+    notifications.router, prefix=settings.API_V1_PREFIX
+)
+app.include_router(
+    analytics.router, prefix=settings.API_V1_PREFIX
 )
 
 
