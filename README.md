@@ -39,9 +39,14 @@ The service includes a **real-time single-page web dashboard** served directly b
 
 Features of the dashboard:
 - 🏥 **Diagnostic Centres & Tests Explorer**: Real-time search, city filters, live test pricing, and one-click test booking.
+- 🕒 **Conflict Prevention & Slot Capacity**: Real-time slot availability check (30-min intervals) with max 5 concurrent appointments capacity guard.
 - 📋 **Patient Booking Management**: Live booking status tracking (`PENDING`, `CONFIRMED`, `FAILED`, `CANCELLED`), instant cancellation.
+- 📄 **Hospital-Grade PDF Invoices**: 1-click downloadable medical receipt with test details, pricing breakdown, and preparation guidelines.
 - 💳 **Simulated Payment Gateway**: Real-time payment simulation with 80% Success / 20% Failed random distribution.
+- 📧 **Simulated Notification Inbox**: Audit stream of email and SMS notifications (booking confirmation, receipt, payment alerts).
+- 📊 **Executive Admin Analytics & BI**: Revenue KPIs, conversion rate, top centres/tests breakdown, and instant CSV report export.
 - ⚡ **Webhook Idempotency Lab**: Interactive console to send webhook events, test repeated deliveries, and verify `already_processed` deduplication.
+- 🔄 **Stateful Refresh Token Rotation**: Zero-replay-attack token rotation demo with family revocation.
 - 👤 **One-Click Demo Auth**: Pre-filled buttons for Demo Patient & Demo Admin.
 
 ---
