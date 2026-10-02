@@ -10,6 +10,7 @@ import structlog
 
 from app.models.booking import Booking, BookingStatus
 from app.models.payment import Payment, PaymentStatus, WebhookEvent
+from app.models.diagnostic import CentreTest
 from app.schemas.payment import PaymentCreate, WebhookPayload
 from app.services.booking_service import update_booking_status
 from app.utils.exceptions import (
@@ -39,7 +40,12 @@ async def create_payment(
     # Validate booking exists and belongs to user
     result = await db.execute(
         select(Booking)
-        .options(selectinload(Booking.payments))
+        .options(
+            selectinload(Booking.payments),
+            selectinload(Booking.user),
+            selectinload(Booking.centre_test).selectinload(CentreTest.test),
+            selectinload(Booking.centre_test).selectinload(CentreTest.centre),
+        )
         .where(Booking.id == payment_data.booking_id)
     )
     booking = result.scalar_one_or_none()
@@ -107,6 +113,17 @@ async def create_payment(
 
     await db.flush()
     await db.refresh(payment)
+
+    # Dispatch simulated notification
+    if booking.user:
+        try:
+            from app.services import notification_service
+            if payment_result == PaymentStatus.SUCCESS:
+                await notification_service.notify_payment_success(db, booking, payment, booking.user)
+            else:
+                await notification_service.notify_payment_failed(db, booking, payment, booking.user)
+        except Exception as e:
+            logger.warning("payment_notification_failed", error=str(e))
 
     return payment
 
