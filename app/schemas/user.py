@@ -76,3 +76,15 @@ class TokenResponse(BaseModel):
     expires_in: int = Field(
         ..., description="Access token expiry in seconds"
     )
+
+
+class TokenRefreshRequest(BaseModel):
+    """Schema for rotating refresh tokens."""
+
+    refresh_token: str = Field(..., description="Cryptographically secure refresh token")
+
+
+class LogoutRequest(BaseModel):
+    """Schema for user logout and token revocation."""
+
+    refresh_token: Optional[str] = Field(None, description="Refresh token to invalidate")
