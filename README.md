@@ -1,8 +1,8 @@
 <div align="center">
 
-<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:0a0e1a,20:0d2137,40:0a3d62,60:1a5276,80:0d2137,100:0a0e1a&height=220&section=header&text=Eve%20DiagnoSync&fontSize=54&fontColor=ffffff&fontAlignY=36&desc=Distributed%20Diagnostic%20Booking%20%26%20Settlement%20Platform&descAlignY=56&descSize=17&animation=fadeIn" />
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:0a0e1a,20:0d2137,40:0a3d62,60:1a5276,80:0d2137,100:0a0e1a&height=220&section=header&text=Eve%20DiagnoSync&fontSize=50&fontColor=00BFFF&fontAlignY=38&desc=Diagnostic%20Booking%20%26%20Settlement%20Platform&descAlignY=56&descSize=18&descColor=ffffff&animation=fadeIn" />
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=20&pause=900&color=22D3EE&center=true&vCenter=true&width=850&lines=FastAPI+%E2%80%A2+SQLAlchemy+2.0+%E2%80%A2+PostgreSQL+%E2%80%A2+Redis+%E2%80%A2+Celery;Async+Diagnostic+Booking+Engine+with+Slot+Capacity+Guards;Idempotent+Payment+Webhooks+%2B+HMAC+Verification;Rotating+JWT+Auth+Pipeline+with+Family+Token+Tracking;Auto+PDF+Medical+Receipts+%2B+Executive+Analytics+Engine)](https://git.io/typing-svg)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=18&pause=900&color=22D3EE&center=true&vCenter=true&width=750&lines=FastAPI+%7C+SQLAlchemy+2.0+%7C+PostgreSQL+%7C+Redis+%7C+Celery;Async+Booking+Engine+with+Slot+Capacity+Guards;Idempotent+Webhooks+%2B+HMAC+Verification;Rotating+JWT+Auth+%2B+Family+Token+Tracking;PDF+Medical+Receipts+%2B+Analytics+Engine)](https://git.io/typing-svg)
 
 <br/>
 
@@ -563,7 +563,7 @@ eve-healthcare/
 
 <div align="center">
 
-<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:0a0e1a,20:0d2137,40:0a3d62,60:1a5276,80:0d2137,100:0a0e1a&height=120&section=footer&animation=fadeIn" />
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:0a0e1a,20:0d2137,40:0a3d62,60:1a5276,80:0d2137,100:0a0e1a&height=120&section=footer" />
 
 **Eve DiagnoSync - Built as a production-grade backend engineering assignment**
 
